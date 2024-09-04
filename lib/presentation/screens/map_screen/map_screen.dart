@@ -17,13 +17,11 @@ class _MapScreenState extends State<MapScreen> {
   Point? myCurrentLocation;
   Position? _currentLocation;
   LocationPermission? permission;
-  final YandexSearch yandexSearch = YandexSearch();
-  final TextEditingController _searchTextController = TextEditingController();
-  double searchHeight = 250;
   String? _selectedStreet;
   Point? _selectedPoint;
 
-  List<SuggestItem> _suggestionList = [];
+  // ignore: unused_field
+  final List<SuggestItem> _suggestionList = [];
   final Point najotTalim = const Point(
     latitude: 41.2856806,
     longitude: 69.2034646,
@@ -35,35 +33,12 @@ class _MapScreenState extends State<MapScreen> {
     _checkPermission();
   }
 
-  @override
-  void dispose() {
-    _searchTextController.dispose();
-    super.dispose();
-  }
-
   Future<void> _checkPermission() async {
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       permission = await Geolocator.requestPermission();
     }
-  }
-
-  Future<SuggestSessionResult> _suggest() async {
-    final resultWithSession = await YandexSuggest.getSuggestions(
-      text: _searchTextController.text,
-      boundingBox: const BoundingBox(
-        northEast: Point(latitude: 56.0421, longitude: 38.0284),
-        southWest: Point(latitude: 55.5143, longitude: 37.24841),
-      ),
-      suggestOptions: const SuggestOptions(
-        suggestType: SuggestType.geo,
-        suggestWords: true,
-        userPosition: Point(latitude: 56.0321, longitude: 38),
-      ),
-    );
-
-    return await resultWithSession.$2;
   }
 
   void _zoomToLocation(Point point) {
@@ -81,12 +56,67 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _onSearchItemSelected(SuggestItem item) {
-    setState(() {
-      searchHeight = 0;
-      myCurrentLocation = item.center;
-    });
-    _zoomToLocation(myCurrentLocation!);
+  void _showLocationBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Selected Location',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text(
+                    "Tanlangan joy: ",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  Text(
+                    _selectedStreet ?? 'Unknown street',
+                    style: const TextStyle(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context, {
+                    'street': _selectedStreet,
+                    'latitude': _selectedPoint?.latitude,
+                    'longitude': _selectedPoint?.longitude,
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Select location',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -107,15 +137,6 @@ class _MapScreenState extends State<MapScreen> {
               );
             },
             onMapTap: (point) async {
-              print(point);
-              // List<Placemark> placemarks = await placemarkFromCoordinates(
-              //   point.latitude,
-              //   point.longitude,
-              // );
-              // if (placemarks.isNotEmpty) {
-              //   print("${placemarks.first.street}");
-              // }
-
               List<Placemark> placemarks = await placemarkFromCoordinates(
                 point.latitude,
                 point.longitude,
@@ -158,94 +179,6 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
             ],
-          ),
-          Positioned(
-            top: 70,
-            left: 10,
-            right: 10,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: _suggestionList.isNotEmpty ? searchHeight : 0,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.white,
-              ),
-              child: ListView.builder(
-                itemCount: _suggestionList.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    onTap: () => _onSearchItemSelected(_suggestionList[index]),
-                    title: Text(
-                      _suggestionList[index].title,
-                      style: const TextStyle(
-                        color: Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _suggestionList[index].subtitle!,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          Positioned(
-            top: 50,
-            left: 10,
-            right: 10,
-            child: Column(
-              children: [
-                TextField(
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  decoration: InputDecoration(
-                    suffixIcon: _suggestionList.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _searchTextController.text = "";
-                                myCurrentLocation = null;
-                                _suggestionList = [];
-                              });
-                            },
-                            child: const Icon(CupertinoIcons.clear_fill,
-                                color: Colors.grey,),
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.location_on_rounded,
-                        color: Colors.teal),
-                    hintText: "Search",
-                    hintStyle: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: Colors.teal),
-                    ),
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  controller: _searchTextController,
-                  onChanged: (value) async {
-                    final res = await _suggest();
-                    if (res.items != null) {
-                      setState(() {
-                        _suggestionList = res.items!.toSet().toList();
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
           ),
           Positioned(
             right: 10,
@@ -301,66 +234,6 @@ class _MapScreenState extends State<MapScreen> {
         },
         child: const Icon(CupertinoIcons.location_fill, color: Colors.white),
       ),
-    );
-  }
-
-  void _showLocationBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Selected Location',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Text(
-                    "Tanlangan joy: ",
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  Text(
-                    _selectedStreet ?? 'Unknown street',
-                    style: const TextStyle(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context, {
-                    'street': _selectedStreet,
-                    'latitude': _selectedPoint?.latitude,
-                    'longitude': _selectedPoint?.longitude,
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Select location',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

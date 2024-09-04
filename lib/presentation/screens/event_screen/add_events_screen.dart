@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tudo_app/data/models/event_model.dart';
 import 'package:tudo_app/domain/entities/event.dart';
 import 'package:tudo_app/presentation/blocs/events_bloc/todo_events_bloc.dart';
-import 'package:tudo_app/presentation/screens/map_screen.dart';
+import 'package:tudo_app/presentation/screens/map_screen/map_screen.dart';
 import 'package:tudo_app/presentation/widgets/add_event_widgets/color_picker.dart';
 import 'package:tudo_app/presentation/widgets/add_event_widgets/cusotm_color_picker.dart';
 import 'package:tudo_app/presentation/widgets/add_event_widgets/cutom_textfild.dart';
